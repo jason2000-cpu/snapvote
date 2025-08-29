@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,42 +11,42 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 export default function CreatePollPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [options, setOptions] = useState(['', '']);
+  
+  // Define form with react-hook-form
+  const form = useForm({
+    defaultValues: {
+      title: '',
+      description: '',
+      options: [
+        { value: '' },
+        { value: '' }
+      ]
+    }
+  });
+  
+  // Use fieldArray to handle dynamic options
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "options"
+  });
 
   const handleAddOption = () => {
-    setOptions([...options, '']);
+    append({ value: '' });
   };
 
   const handleRemoveOption = (index: number) => {
-    if (options.length <= 2) return; // Minimum 2 options required
-    const newOptions = [...options];
-    newOptions.splice(index, 1);
-    setOptions(newOptions);
+    if (fields.length <= 2) return; // Minimum 2 options required
+    remove(index);
   };
 
-  const handleOptionChange = (index: number, value: string) => {
-    const newOptions = [...options];
-    newOptions[index] = value;
-    setOptions(newOptions);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Basic validation
-    if (!title.trim()) return;
-    if (!description.trim()) return;
-    if (options.filter(opt => opt.trim()).length < 2) return;
-    
+  const handleSubmit = async (values: any) => {    
     setIsLoading(true);
     
     try {
       // Simulate API call to create poll
       setTimeout(() => {
         // In a real app, this would be an API call
-        console.log('Poll created:', { title, description, options });
+        console.log('Poll created:', values);
         setIsLoading(false);
         router.push('/polls');
       }, 1000);
@@ -69,73 +70,98 @@ export default function CreatePollPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <FormLabel htmlFor="title">Poll Title</FormLabel>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter a question for your poll"
-                required
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Poll Title</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter a question for your poll"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            
-            <div className="space-y-2">
-              <FormLabel htmlFor="description">Description (Optional)</FormLabel>
-              <Input
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Add more context to your question"
+              
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Add more context to your question"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <FormLabel>Poll Options</FormLabel>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleAddOption}
-                >
-                  Add Option
-                </Button>
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <FormLabel>Poll Options</FormLabel>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleAddOption}
+                  >
+                    Add Option
+                  </Button>
+                </div>
+                
+                {fields.map((field, index) => (
+                  <FormField
+                    key={field.id}
+                    control={form.control}
+                    name={`options.${index}.value`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center gap-2">
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder={`Option ${index + 1}`}
+                            />
+                          </FormControl>
+                          {fields.length > 2 && (
+                            <Button 
+                              type="button" 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleRemoveOption(index)}
+                              className="px-2"
+                            >
+                              ×
+                            </Button>
+                          )}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ))}
               </div>
               
-              {options.map((option, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <Input
-                    value={option}
-                    onChange={(e) => handleOptionChange(index, e.target.value)}
-                    placeholder={`Option ${index + 1}`}
-                    required
-                  />
-                  {options.length > 2 && (
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => handleRemoveOption(index)}
-                      className="px-2"
-                    >
-                      ×
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-            
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={isLoading}
-            >
-              {isLoading ? 'Creating Poll...' : 'Create Poll'}
-            </Button>
-          </form>
-        </CardContent>
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isLoading}
+              >
+                {isLoading ? 'Creating Poll...' : 'Create Poll'}
+              </Button>
+            </form>
+          </Form>
+          </CardContent>
       </Card>
     </div>
   );
