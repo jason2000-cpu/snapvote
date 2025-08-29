@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -13,13 +12,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useAuth } from '@/context/auth-context';
 
 export default function Navigation() {
   const pathname = usePathname();
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // This would use the auth context in a real app
-
-  // For demo purposes only - toggle login state
-  const toggleLogin = () => setIsLoggedIn(!isLoggedIn);
+  const { user, signOut, isLoading } = useAuth();
 
   return (
     <header className="border-b">
@@ -44,22 +41,26 @@ export default function Navigation() {
           </nav>
         </div>
         <div className="flex items-center gap-4">
-          {isLoggedIn ? (
+          {isLoading ? (
+            <Button variant="ghost" size="sm" disabled>
+              Loading...
+            </Button>
+          ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="/avatars/01.png" alt="@user" />
-                    <AvatarFallback>U</AvatarFallback>
+                    <AvatarImage src={`https://avatar.vercel.sh/${user.email || ''}`} alt={user.email || 'User'} />
+                    <AvatarFallback>{(user.email || 'U').charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">User</p>
+                    <p className="text-sm font-medium leading-none">{user.user_metadata?.name || 'User'}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      user@example.com
+                      {user.email}
                     </p>
                   </div>
                 </DropdownMenuLabel>
@@ -71,20 +72,16 @@ export default function Navigation() {
                   <Link href="/settings" className="w-full">Settings</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={toggleLogin}>Log out</DropdownMenuItem>
+                <DropdownMenuItem onClick={signOut}>Log out</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <div className="flex items-center gap-2">
-              <Link href="/auth/sign-in">
-                <Button variant="ghost" size="sm">Sign In</Button>
-              </Link>
-              <Link href="/auth/sign-up">
-                <Button size="sm">Sign Up</Button>
-              </Link>
-              {/* For demo purposes only */}
-              <Button variant="outline" size="sm" onClick={toggleLogin} className="ml-2">
-                Demo Login
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/auth/sign-in">Sign In</Link>
+              </Button>
+              <Button size="sm" asChild>
+                <Link href="/auth/sign-up">Sign Up</Link>
               </Button>
             </div>
           )}

@@ -3,35 +3,47 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import Link from 'next/link';
+import { useAuth } from '@/context/auth-context';
+
+// Define the form schema with Zod
+const formSchema = z.object({
+  email: z.string().email({ message: 'Please enter a valid email address' }),
+  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 export default function SignIn() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const { signIn, isLoading } = useAuth();
+  const [error, setError] = useState<string | null>(null);
   
-  // Define form with react-hook-form
-  const form = useForm({
+  // Define form with react-hook-form and zod validation
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       email: '',
       password: ''
     }
   });
 
-  // This is a placeholder function for handling sign-in
-  const handleSignIn = async (values: any) => {
-    setIsLoading(true);
-    
-    // Placeholder for authentication logic
-    console.log('Form values:', values);
-    
-    setTimeout(() => {
-      setIsLoading(false);
-      router.push('/polls');
-    }, 1000);
+  // Handle sign-in with Supabase
+  const handleSignIn = async (values: FormValues) => {
+    setError(null);
+    try {
+      await signIn(values.email, values.password);
+      // Navigation is handled in the auth context
+    } catch (err: any) {
+      setError(err.message || 'Failed to sign in. Please try again.');
+      console.error('Sign in error:', err);
+    }
   };
 
   return (
@@ -44,6 +56,11 @@ export default function SignIn() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {error && (
+            <div className="p-3 mb-4 text-sm border border-destructive text-destructive rounded-md">
+              {error}
+            </div>
+          )}
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSignIn)} className="space-y-4">
               <FormField

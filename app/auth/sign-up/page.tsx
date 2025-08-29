@@ -3,18 +3,36 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import Link from 'next/link';
+import { useAuth } from '@/context/auth-context';
+
+// Define the form schema with Zod
+const formSchema = z.object({
+  name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
+  email: z.string().email({ message: 'Please enter a valid email address' }),
+  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+  confirmPassword: z.string()
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 export default function SignUp() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const { signUp, isLoading } = useAuth();
+  const [error, setError] = useState<string | null>(null);
   
-  // Define form with react-hook-form
-  const form = useForm({
+  // Define form with react-hook-form and zod validation
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
       email: '',
@@ -23,17 +41,16 @@ export default function SignUp() {
     }
   });
 
-  // This is a placeholder function for handling sign-up
-  const handleSignUp = async (values: any) => {
-    setIsLoading(true);
-    
-    // Placeholder for registration logic
-    console.log('Form values:', values);
-    
-    setTimeout(() => {
-      setIsLoading(false);
-      router.push('/auth/sign-in');
-    }, 1000);
+  // Handle sign-up with Supabase
+  const handleSignUp = async (values: FormValues) => {
+    setError(null);
+    try {
+      await signUp(values.email, values.password, values.name);
+      // Navigation is handled in the auth context
+    } catch (err: any) {
+      setError(err.message || 'Failed to sign up. Please try again.');
+      console.error('Sign up error:', err);
+    }
   };
 
   return (
@@ -46,6 +63,11 @@ export default function SignUp() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {error && (
+            <div className="p-3 mb-4 text-sm border border-destructive text-destructive rounded-md">
+              {error}
+            </div>
+          )}
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSignUp)} className="space-y-4">
               <FormField
