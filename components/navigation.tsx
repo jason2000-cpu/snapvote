@@ -32,12 +32,14 @@ export default function Navigation() {
             >
               Polls
             </Link>
-            <Link
-              href="/polls/create"
-              className={`text-sm font-medium transition-colors hover:text-primary ${pathname === '/polls/create' ? 'text-primary' : 'text-muted-foreground'}`}
-            >
-              Create Poll
-            </Link>
+            {user && (
+              <Link
+                href="/polls/create"
+                className={`text-sm font-medium transition-colors hover:text-primary ${pathname === '/polls/create' ? 'text-primary' : 'text-muted-foreground'}`}
+              >
+                Create Poll
+              </Link>
+            )}
           </nav>
         </div>
         <div className="flex items-center gap-4">

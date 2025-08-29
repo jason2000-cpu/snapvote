@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/context/auth-context';
 
 // Mock poll data type
 type Poll = {
@@ -42,6 +43,7 @@ const mockPolls: Poll[] = [
 export default function PollsPage() {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     // Simulate API call to fetch polls
@@ -65,9 +67,15 @@ export default function PollsPage() {
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Available Polls</h1>
-        <Link href="/polls/create">
-          <Button>Create New Poll</Button>
-        </Link>
+        {user ? (
+          <Link href="/polls/create">
+            <Button>Create New Poll</Button>
+          </Link>
+        ) : (
+          <Link href="/auth/sign-in">
+            <Button variant="outline">Sign In to Create Polls</Button>
+          </Link>
+        )}
       </div>
 
       {isLoading ? (

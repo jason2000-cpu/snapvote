@@ -4,9 +4,11 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/context/auth-context';
 
 export default function Home() {
   const router = useRouter();
+  const { user } = useAuth();
   
   // Redirect to polls page after a short delay
   useEffect(() => {
@@ -32,9 +34,16 @@ export default function Home() {
             <Button onClick={() => router.push('/polls')} size="lg">
               Browse Polls
             </Button>
-            <Button onClick={() => router.push('/polls/create')} variant="outline" size="lg">
-              Create a Poll
-            </Button>
+            {user && (
+              <Button onClick={() => router.push('/polls/create')} variant="outline" size="lg">
+                Create a Poll
+              </Button>
+            )}
+            {!user && (
+              <Button onClick={() => router.push('/auth/sign-in')} variant="outline" size="lg">
+                Sign In to Create Polls
+              </Button>
+            )}
           </div>
         </CardContent>
         <CardFooter className="justify-center text-sm text-muted-foreground">
