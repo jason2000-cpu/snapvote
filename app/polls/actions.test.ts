@@ -68,7 +68,7 @@ describe('Poll Actions', () => {
       const result = await createPoll(validPollData, mockUserId);
       
       // Assertions
-      expect(result).toEqual({ success: true, pollId: mockPollId });
+      expect(result).toEqual({ success: true, data: { pollId: mockPollId } });
       expect(supabase.from).toHaveBeenCalledWith('polls');
       expect(supabase.from).toHaveBeenCalledWith('options');
       expect(revalidatePath).toHaveBeenCalledWith('/polls');
@@ -244,7 +244,7 @@ describe('Poll Actions', () => {
       const result = await updatePoll(pollId, validUpdateData, mockUserId);
       
       // Assertions
-      expect(result).toEqual({ success: true, pollId });
+      expect(result).toEqual({ success: true, data: { pollId } });
       expect(supabase.from).toHaveBeenCalledWith('polls');
       expect(supabase.from).toHaveBeenCalledWith('options');
       expect(revalidatePath).toHaveBeenCalledWith('/polls');
