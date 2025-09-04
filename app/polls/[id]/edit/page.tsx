@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { updatePoll, PollFormData } from '../../actions';
 import { useAuth } from '@/context/auth-context';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../../database';
 
 // Define the schema for poll editing (same as creation)
 const formSchema = z.object({

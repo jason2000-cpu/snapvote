@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/context/auth-context';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../database';
 
 // Poll data types
 type Option = {

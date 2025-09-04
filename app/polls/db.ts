@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabase } from './database';
 import { ActionResponse, Poll, PollInsert, Option, OptionInsert } from './types';
 import { PollFormData } from './validation';
 

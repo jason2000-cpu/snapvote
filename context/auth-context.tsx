@@ -4,14 +4,18 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
+import { refreshSession, isSessionExpiringSoon, setSessionTimeout } from '@/lib/session-management';
+import { useToast } from '@/components/ui/use-toast';
 
 type AuthContextType = {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
   signUp: (email: string, password: string, name: string) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string, sessionTimeoutMinutes?: number) => Promise<void>;
   signOut: () => Promise<void>;
+  refreshUserSession: () => Promise<boolean>;
+  checkSessionExpiry: (warningMinutes?: number) => Promise<boolean>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,6 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     // Get session from Supabase
@@ -32,6 +37,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
+      
+      // Check if session is about to expire
+      if (session) {
+        const expiringSoon = await isSessionExpiringSoon(15); // 15 minutes warning
+        if (expiringSoon) {
+          // Attempt to refresh the session
+          const refreshed = await refreshUserSession();
+          if (refreshed) {
+            toast({
+              title: "Session Extended",
+              description: "Your login session has been automatically extended."
+            });
+          } else {
+            toast({
+              title: "Session Expiring",
+              description: "Your session will expire soon. Please save your work and log in again.",
+              variant: "destructive"
+            });
+          }
+        }
+      }
     };
 
     getSession();
@@ -44,9 +70,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       }
     );
+    
+    // Set up periodic session check (every 5 minutes)
+    const sessionCheckInterval = setInterval(async () => {
+      const expiringSoon = await checkSessionExpiry(15);
+      if (expiringSoon && session) {
+        await refreshUserSession();
+      }
+    }, 5 * 60 * 1000);
 
     return () => {
       subscription.unsubscribe();
+      clearInterval(sessionCheckInterval);
     };
   }, []);
 
@@ -73,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, sessionTimeoutMinutes = 60) => {
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -82,9 +117,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) throw error;
+      
+      // Set custom session timeout if provided
+      await setSessionTimeout(sessionTimeoutMinutes);
+      
       router.push('/polls');
     } catch (error) {
       console.error('Error signing in:', error);
+      toast({
+        title: "Sign In Failed",
+        description: error instanceof Error ? error.message : "Failed to sign in",
+        variant: "destructive"
+      });
       throw error;
     } finally {
       setIsLoading(false);
@@ -105,6 +149,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Function to refresh the user session
+  const refreshUserSession = async (): Promise<boolean> => {
+    try {
+      const newSession = await refreshSession();
+      if (newSession) {
+        setSession(newSession);
+        setUser(newSession.user);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error refreshing session:', error);
+      return false;
+    }
+  };
+
+  // Function to check if the session is expiring soon
+  const checkSessionExpiry = async (warningMinutes = 5): Promise<boolean> => {
+    return await isSessionExpiringSoon(warningMinutes);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -114,6 +179,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signUp,
         signIn,
         signOut,
+        refreshUserSession,
+        checkSessionExpiry,
       }}
     >
       {children}

@@ -9,13 +9,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
 import { useAuth } from '@/context/auth-context';
+import { useToast } from '@/components/ui/use-toast';
 
 // Define the form schema with Zod
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+  sessionTimeout: z.string().default('60'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -24,13 +27,15 @@ export default function SignIn() {
   const router = useRouter();
   const { signIn, isLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
   
   // Define form with react-hook-form and zod validation
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: '',
-      password: ''
+      password: '',
+      sessionTimeout: '60'
     }
   });
 
@@ -38,7 +43,12 @@ export default function SignIn() {
   const handleSignIn = async (values: FormValues) => {
     setError(null);
     try {
-      await signIn(values.email, values.password);
+      const sessionTimeoutMinutes = parseInt(values.sessionTimeout, 10);
+      await signIn(values.email, values.password, sessionTimeoutMinutes);
+      toast({
+        title: "Signed in successfully",
+        description: `Session will expire in ${sessionTimeoutMinutes} minutes unless extended.`
+      });
       // Navigation is handled in the auth context
     } catch (err: any) {
       setError(err.message || 'Failed to sign in. Please try again.');
@@ -91,6 +101,33 @@ export default function SignIn() {
                     <FormControl>
                       <Input type="password" {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="sessionTimeout"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Session Timeout</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select session timeout" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="30">30 minutes</SelectItem>
+                        <SelectItem value="60">1 hour</SelectItem>
+                        <SelectItem value="120">2 hours</SelectItem>
+                        <SelectItem value="240">4 hours</SelectItem>
+                        <SelectItem value="480">8 hours</SelectItem>
+                        <SelectItem value="720">12 hours</SelectItem>
+                        <SelectItem value="1440">24 hours</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
