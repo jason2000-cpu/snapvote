@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -18,13 +17,12 @@ import { useToast } from '@/components/ui/use-toast';
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-  sessionTimeout: z.string().default('60'),
+  sessionTimeout: z.string(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 export default function SignIn() {
-  const router = useRouter();
   const { signIn, isLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -50,8 +48,9 @@ export default function SignIn() {
         description: `Session will expire in ${sessionTimeoutMinutes} minutes unless extended.`
       });
       // Navigation is handled in the auth context
-    } catch (err: any) {
-      setError(err.message || 'Failed to sign in. Please try again.');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to sign in. Please try again.';
+      setError(errorMessage);
       console.error('Sign in error:', err);
     }
   };
